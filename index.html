@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Question Quality Annotator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    // ─── EMBEDDED BATCH DATA ─────────────────────────────────────────────────────
+    // Replace this array to change which questions are annotated.
+    // Questions are split in half per document_id and paired positionally.
+    const BATCH = [{"question": "Who has a kit in the story?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Min has a kit.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "What color is the big bug they find?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "The big bug is red.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Where do Min and Kim dig for the bug?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "They dig in a big pit.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Why did Min and Kim use a lid and a kit?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "They used the lid and kit to catch the bug so it would not slip away.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "How do you think Kim felt when they caught the bug?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Kim felt happy and proud because she had a big grin.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Why do you think Min and Kim sat in the sun with the bug?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "They sat in the sun because they were proud and had fun with the bug.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Have you ever helped a friend catch a bug? What did you do?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary. For example, 'Yes, I helped my friend catch a butterfly by using a jar.'", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "What is fun about working with a friend like Min and Kim did?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "It is fun because you share the work and feel happy when you do a big job together.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Do you like to sit outside in the sun like Min and Kim? Why or why not?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary. For example, 'Yes, I like sitting in the sun because it is warm.'", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Who went camping in the story?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Luis, Maya, and Dad went camping.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What did Luis help Dad do at the hill?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Luis helped Dad by holding the tent up.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What were Luis and Maya doing by the fire?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "They were roasting nuts, sipping hot milk, and singing.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Why did Maya ask about something running in the dark?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Because she heard a rustling sound in the grass.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "How did the dog act when it came to the fire?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "The dog wagged its tail, licked, sniffed the food, and rested by the fire.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Why do you think the family liked the camping trip?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Because they had fun by the fire and enjoyed the stars.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Have you ever helped set up a tent or a campfire? What did you do?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary but should connect to helping with camping.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What do you like to eat or drink when you sit by a fire?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary but should connect to cozy fire snacks or drinks.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Have you ever seen a dog visit you outside? What did the dog do?", "question_category": "unknown", "kind": "single_hop", "estimated_difficulty": null, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary but should relate to seeing a friendly dog.", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What color was the big bug Min and Kim found?", "question_category": "literal", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "The bug was big and red.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "What did Min use to lift?", "question_category": "literal", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Min used a lid to lift.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Who pinned the bug in the kit?", "question_category": "literal", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Kim pinned the bug in the kit.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "How did Min and Kim make sure the bug would not slip away?", "question_category": "inferential", "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Min lifted the lid and Kim pinned the bug in the kit so it could not slip away.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Why did Min say, “Look, Kim! We did it!”?", "question_category": "inferential", "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Because they caught the big red bug together.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "How do you think Kim felt when they caught the bug?", "question_category": "inferential", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Kim had a big grin, so she felt happy and proud.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Have you ever worked with a friend to catch something or do a job? What did you do?", "question_category": "connection", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary. Example: I worked with a friend to catch a butterfly using a jar.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "What can you and a friend do to keep an animal safe if you find it outside?", "question_category": "connection", "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "You can use tools like a lid and a kit to gently hold the animal so it does not run away.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "How do you feel when you finish a big job with a friend, like Min and Kim did?", "question_category": "connection", "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Many feel happy, proud, and like to rest in the sun or have fun.", "document_id": "e70e4c4d-bbd4-4caf-baa7-0cd832e7738f", "document": "# 1st Grade Text\n## Min, Kim, and the Big Dig\nMin has a kit.\nKim has a lid.\nThey dig in the big pit.\n“Dig, Min! Dig, Kim!”\nA bug is in the pit.\nThe bug is big and red.\nMin can lift the lid.\nKim can pin the bug in the kit.\nThe bug will not slip.\n“Look, Kim! We did it!” said Min.\nKim had a big grin.\nThey put the bug in the kit.\nMin, Kim, and the bug sit in the sun.\nThey had fun and did a big job."}, {"question": "Who went camping in the story?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Luis, Maya, and their Dad", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What did Maya wear on her head?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "A red cap", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What were the children doing by the fire?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Roasting nuts and singing songs", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "How do you think Luis and Maya felt when the dog came?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "They felt happy and giggled", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Why was Dad smiling when the dog was near?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Because the dog was friendly and made the trip fun", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Why do you think the camping night was the best night?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Because they had fun and the stars were twinkling", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "What is one food you like to eat at a campfire like Luis and Maya?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary, such as marshmallows or nuts", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Have you seen a small dog like the one in the story? What did it do?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 1, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary, such as wagging tail or playing", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}, {"question": "Can you tell about a fun night you had with your family?", "question_category": null, "kind": "multi_hop", "estimated_difficulty": 2, "question_generating_model": "gpt-4.1-mini", "ground_truth_answer": "Answers will vary, such as having a picnic or singing songs", "document_id": "143df584-ab94-4dcc-b0ae-c0504947926c", "document": "# 2nd Grade Text\n# The Camping Trip\nLuis and Maya were going camping with Dad. They were packing a tent, a bag, and food. Maya was singing as she put on a red cap. Luis was humming as he looked at a map.\nWhen they got to the hill, Dad was lifting the big tent. Luis was helping by holding the tent up. Maya was running to get sticks for the fire.\nAs night came, the kids were sitting by the fire. They were roasting nuts and sipping hot milk. The fire was crackling and popping. The kids were singing a silly song.\nThen Maya heard a rustling in the grass. “What is running in the dark?” she said. Luis was grabbing a lamp. The lamp was shining on a small dog!\nThe dog was wagging and licking. It was sniffing at the food and jumping at the bag. The kids were giggling. Dad was smiling.\nThe dog kept resting by the fire. It was curling up and napping. Luis and Maya kept singing. Dad was humming. The fire was glowing, and the stars were twinkling.\nIt was the best night of camping."}];
+
+    // ─── RUBRIC ──────────────────────────────────────────────────────────────────
+
+    const CRITERIA = [
+      {
+        id: "sentenceLength",
+        name: "Sentence Length & Complexity",
+        icon: "📏",
+        levels: [
+          { score: 2, detail: "Short sentences (<10 words) AND no complex phrases" },
+          { score: 1, detail: "Short sentences (<10 words) OR no complex phrases — one, not both" },
+          { score: 0, detail: "Long sentences (>10 words) AND complex phrases" },
+        ],
+      },
+      {
+        id: "vocabulary",
+        name: "Vocabulary",
+        icon: "📖",
+        levels: [
+          { score: 2, detail: 'Child-friendly words (e.g. "found" not "discovered") AND no meta-language (e.g. "plot")' },
+          { score: 1, detail: "Child-friendly words OR no meta-language — one, not both" },
+          { score: 0, detail: "Non child-friendly words AND complex/meta-language" },
+        ],
+      },
+      {
+        id: "keyIdeas",
+        name: "Focus on Key Ideas",
+        icon: "🎯",
+        levels: [
+          { score: 2, detail: "Critical to understanding the story or drives the plot" },
+          { score: 1, detail: "Somewhat important to understanding the story" },
+          { score: 0, detail: "About insignificant/minor details not pivotal to the plot" },
+        ],
+      },
+    ];
+
+    // ─── DATA UTILITIES ───────────────────────────────────────────────────────────
+
+    function extractMetadata(row) {
+      return {
+        question_category: row.question_category || null,
+        estimated_difficulty:
+          row.estimated_difficulty !== undefined && row.estimated_difficulty !== null
+            ? row.estimated_difficulty : null,
+        kind:         row.kind || null,
+        model:        row.question_generating_model || null,
+        ground_truth: row.ground_truth_answer || null,
+        document_id:  row.document_id || null,
+      };
+    }
+
+    // Split each document's rows in half by file order, pair positionally.
+    // Agnostic to any specific field — works with any two generation batches.
+    function buildPairs(rows) {
+      var byDoc = {};
+      rows.forEach(function(row, i) {
+        var key = row.document_id || "default";
+        if (!byDoc[key]) byDoc[key] = [];
+        byDoc[key].push({ row: row, idx: i });
+      });
+
+      var pairs = [];
+      Object.keys(byDoc).forEach(function(docId) {
+        var entries = byDoc[docId];
+        var half    = Math.floor(entries.length / 2);
+        var groupA  = entries.slice(0, half);
+        var groupB  = entries.slice(half, half * 2);
+        for (var j = 0; j < groupA.length; j++) {
+          var a = groupA[j];
+          var b = groupB[j];
+          pairs.push({
+            id:        "pair_" + docId + "_" + j,
+            material:  a.row.document || a.row.document_summary || "",
+            questionA: a.row.question || "",
+            questionB: b.row.question || "",
+            metadataA: extractMetadata(a.row),
+            metadataB: extractMetadata(b.row),
+          });
+        }
+      });
+      return pairs;
+    }
+
+    // ─── CORE UTILITIES ───────────────────────────────────────────────────────────
+
+    function emptyScores() { return { sentenceLength: null, vocabulary: null, keyIdeas: null }; }
+
+    function totalScore(scores) {
+      var vals = Object.values(scores);
+      if (vals.some(function(v) { return v === null; })) return null;
+      return vals.reduce(function(a, b) { return a + b; }, 0);
+    }
+
+    function allFilled(scores) {
+      return Object.values(scores).every(function(v) { return v !== null; });
+    }
+
+    function downloadJSON(data, filename) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    // ─── SCORE SELECTOR ──────────────────────────────────────────────────────────
+
+    function ScoreSelector({ value, onChange }) {
+      var active = {
+        0: "bg-red-500 text-white border-red-500 shadow-sm",
+        1: "bg-amber-400 text-white border-amber-400 shadow-sm",
+        2: "bg-green-500 text-white border-green-500 shadow-sm",
+      };
+      var idle = {
+        0: "bg-white border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500",
+        1: "bg-white border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-500",
+        2: "bg-white border-gray-200 text-gray-400 hover:border-green-300 hover:text-green-500",
+      };
+      return (
+        <div className="flex gap-1.5 shrink-0">
+          {[0, 1, 2].map(function(s) {
+            return (
+              <button
+                key={s}
+                onClick={function() { onChange(value === s ? null : s); }}
+                className={"w-9 h-9 rounded-lg border-2 font-bold text-sm transition-all select-none " +
+                  (value === s ? active[s] : idle[s])}
+                title={"Score " + s}
+              >{s}</button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // ─── RUBRIC PANEL ────────────────────────────────────────────────────────────
+
+    function RubricPanel({ onFlag }) {
+      const [open, setOpen] = useState(true);
+      function badgeCls(s) { return s === 2 ? "bg-green-500" : s === 1 ? "bg-amber-400" : "bg-red-500"; }
+      function rowCls(s)   { return s === 2 ? "bg-green-50 border-green-200 text-green-800" : s === 1 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-red-50 border-red-200 text-red-800"; }
+      return (
+        <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+          <button
+            onClick={function() { setOpen(function(o) { return !o; }); }}
+            className="w-full flex justify-between items-center px-4 py-3 bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+          >
+            <span className="font-semibold text-violet-800 text-sm">📋 Scoring Rubric</span>
+            <span className="text-violet-400 text-xs font-medium">{open ? "Hide ▲" : "Show ▼"}</span>
+          </button>
+          {open && (
+            <div className="divide-y divide-gray-100">
+              {CRITERIA.map(function(c) {
+                return (
+                  <div key={c.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-sm font-semibold text-gray-800">{c.icon} {c.name}</span>
+                      <button
+                        onClick={function() { onFlag(c.id); }}
+                        className="flex items-center gap-1 text-xs text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full hover:bg-amber-50 hover:border-amber-400 transition-colors"
+                      >🚩 Feedback</button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {c.levels.map(function(l) {
+                        return (
+                          <div key={l.score} className={"flex gap-2 items-start p-2 rounded-lg border text-xs leading-relaxed " + rowCls(l.score)}>
+                            <span className={"shrink-0 w-5 h-5 rounded text-white font-bold flex items-center justify-center text-xs " + badgeCls(l.score)}>{l.score}</span>
+                            <span>{l.detail}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── FLAG MODAL ──────────────────────────────────────────────────────────────
+
+    function FlagModal({ criterionId, onClose, onSubmit }) {
+      const [text, setText] = useState("");
+      var criterion = CRITERIA.find(function(c) { return c.id === criterionId; });
+      return (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
+          onClick={function(e) { if (e.target === e.currentTarget) onClose(); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-800">🚩 Rubric Feedback</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Criterion: <span className="font-medium text-gray-700">{criterion && criterion.icon} {criterion && criterion.name}</span>
+                </p>
+              </div>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
+            </div>
+            <div className="px-6 py-4">
+              <label className="text-xs font-semibold text-gray-700 block mb-2">
+                Your feedback <span className="text-red-400">*</span>
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Is something unclear? Missing an edge case? Have a suggestion for better wording?</p>
+              <textarea
+                value={text}
+                onChange={function(e) { setText(e.target.value); }}
+                placeholder="e.g. 'Hard to judge whether a feelings question counts as critical to the plot...'"
+                className="w-full border rounded-xl p-3 text-sm h-32 resize-none focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400"
+                autoFocus
+              />
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-3">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                disabled={!text.trim()}
+                onClick={function() { if (text.trim()) onSubmit({ criterionId: criterionId, text: text }); }}
+                className="px-5 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >Submit</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── METADATA BADGES ─────────────────────────────────────────────────────────
+
+    function MetadataBadges({ metadata }) {
+      if (!metadata) return null;
+      var catColor  = { literal: "bg-blue-100 text-blue-700", inferential: "bg-purple-100 text-purple-700", connection: "bg-teal-100 text-teal-700" };
+      var diffColor = ["bg-green-100 text-green-700", "bg-amber-100 text-amber-700", "bg-red-100 text-red-700"];
+      var diffLabel = ["easy", "medium", "hard"];
+      var kindColor = { single_hop: "bg-sky-100 text-sky-700", multi_hop: "bg-indigo-100 text-indigo-700" };
+
+      var badges = [];
+      if (metadata.kind)
+        badges.push(<span key="kind" className={"text-xs px-2 py-0.5 rounded-full font-semibold " + (kindColor[metadata.kind] || "bg-gray-100 text-gray-600")}>{metadata.kind.replace("_", " ")}</span>);
+      if (metadata.question_category && metadata.question_category !== "unknown")
+        badges.push(<span key="cat"  className={"text-xs px-2 py-0.5 rounded-full font-medium " + (catColor[metadata.question_category] || "bg-gray-100 text-gray-600")}>{metadata.question_category}</span>);
+      if (metadata.estimated_difficulty !== null && metadata.estimated_difficulty !== undefined)
+        badges.push(<span key="diff" className={"text-xs px-2 py-0.5 rounded-full font-medium " + (diffColor[metadata.estimated_difficulty] || "bg-gray-100 text-gray-600")}>{diffLabel[metadata.estimated_difficulty] || "diff " + metadata.estimated_difficulty}</span>);
+      if (metadata.model)
+        badges.push(<span key="model" className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">{metadata.model}</span>);
+
+      if (badges.length === 0) return null;
+      return <div className="flex flex-wrap gap-1.5 mb-2">{badges}</div>;
+    }
+
+    // ─── GROUND TRUTH REVEAL ─────────────────────────────────────────────────────
+
+    function GroundTruthReveal({ groundTruth }) {
+      const [show, setShow] = useState(false);
+      if (!groundTruth) return null;
+      return (
+        <div className="mt-2">
+          <button
+            onClick={function() { setShow(function(s) { return !s; }); }}
+            className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
+          >{show ? "▲ Hide ground truth" : "▼ Show ground truth"}</button>
+          {show && (
+            <div className="mt-1.5 p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-900 leading-relaxed">
+              <span className="font-semibold text-yellow-800">Expected answer: </span>{groundTruth}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── QUESTION SCORE CARD ─────────────────────────────────────────────────────
+    // Scores one question on all 3 dimensions. Used inside the pair form.
+
+    function QuestionScoreCard({ label, question, scores, onScoreChange, accent, metadata }) {
+      var borderCls = { blue: "border-blue-300 bg-blue-50", purple: "border-purple-300 bg-purple-50" };
+      var labelCls  = { blue: "bg-blue-100 text-blue-700", purple: "bg-purple-100 text-purple-700" };
+      var total = totalScore(scores);
+      return (
+        <div className={"border-2 rounded-xl p-4 flex flex-col gap-3 " + borderCls[accent]}>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <span className={"text-xs font-bold px-2.5 py-1 rounded-full " + labelCls[accent]}>{label}</span>
+            {total !== null && (
+              <span className="text-xs font-semibold text-gray-500">
+                Score: <span className={"font-bold text-base " + (total >= 4 ? "text-green-600" : total >= 2 ? "text-amber-600" : "text-red-600")}>{total}</span>
+                <span className="text-gray-400">/6</span>
+              </span>
+            )}
+          </div>
+
+          {/* Metadata */}
+          {metadata && <MetadataBadges metadata={metadata} />}
+
+          {/* Question text */}
+          <div className="text-sm text-gray-800 p-3 bg-white rounded-xl border italic leading-relaxed">
+            "{question}"
+          </div>
+
+          {/* Ground truth */}
+          {metadata && <GroundTruthReveal groundTruth={metadata.ground_truth} />}
+
+          {/* Dimension scores */}
+          <div className="space-y-2.5 pt-1">
+            {CRITERIA.map(function(c) {
+              return (
+                <div key={c.id} className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-gray-600 shrink-0">{c.icon} {c.name}</span>
+                  <ScoreSelector
+                    value={scores[c.id]}
+                    onChange={function(val) { onScoreChange(c.id, val); }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── PAIR ANNOTATION FORM ────────────────────────────────────────────────────
+    // The combined form: score both questions + pick overall winner + add reasoning.
+
+    function PairForm({ pair, onSubmit, existing }) {
+      const [scoresA, setScoresA] = useState(existing ? existing.scoresA : emptyScores());
+      const [scoresB, setScoresB] = useState(existing ? existing.scoresB : emptyScores());
+      const [winner,  setWinner]  = useState(existing ? existing.winner  : null);
+      const [reason,  setReason]  = useState(existing ? existing.reason  : "");
+
+      var canSubmit = allFilled(scoresA) && allFilled(scoresB) && winner !== null;
+
+      var WINNER_OPTS = [
+        { value: "A",   label: "A is better",              cls: "border-blue-400 bg-blue-50 text-blue-700 font-semibold" },
+        { value: "tie", label: "Roughly equal",            cls: "border-gray-400 bg-gray-100 text-gray-700 font-semibold" },
+        { value: "B",   label: "B is better",              cls: "border-purple-400 bg-purple-50 text-purple-700 font-semibold" },
+      ];
+
+      return (
+        <div className="space-y-4">
+          {/* Two question cards side by side */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <QuestionScoreCard
+              label="Question A"
+              question={pair.questionA}
+              scores={scoresA}
+              onScoreChange={function(dim, val) { setScoresA(function(p) { var n = Object.assign({}, p); n[dim] = val; return n; }); }}
+              accent="blue"
+              metadata={pair.metadataA}
+            />
+            <QuestionScoreCard
+              label="Question B"
+              question={pair.questionB}
+              scores={scoresB}
+              onScoreChange={function(dim, val) { setScoresB(function(p) { var n = Object.assign({}, p); n[dim] = val; return n; }); }}
+              accent="purple"
+              metadata={pair.metadataB}
+            />
+          </div>
+
+          {/* Overall preference */}
+          <div className="bg-white border rounded-xl p-4 shadow-sm">
+            <div className="text-sm font-semibold text-gray-700 mb-3">Overall Preference</div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {WINNER_OPTS.map(function(opt) {
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={function() { setWinner(opt.value); }}
+                    className={"flex-1 py-2.5 px-3 rounded-xl border-2 text-sm transition-all " +
+                      (winner === opt.value ? opt.cls : "border-gray-200 text-gray-500 hover:border-gray-300 bg-white")}
+                  >{opt.label}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Reasoning */}
+          <div className="bg-white border rounded-xl p-4 shadow-sm">
+            <label className="text-sm font-semibold text-gray-700 block mb-1.5">
+              Reasoning <span className="font-normal text-gray-400">(optional but encouraged)</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={function(e) { setReason(e.target.value); }}
+              placeholder="Why did you prefer one over the other? Note observations about vocabulary, sentence complexity, or how well the question targets key ideas..."
+              className="w-full border rounded-xl p-3 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400"
+            />
+          </div>
+
+          <button
+            onClick={function() {
+              if (canSubmit) onSubmit({
+                pairId:  pair.id,
+                scoresA: scoresA,
+                scoresB: scoresB,
+                winner:  winner,
+                reason:  reason,
+              });
+            }}
+            disabled={!canSubmit}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {canSubmit
+              ? (existing ? "Update & Continue →" : "Save & Continue →")
+              : "Score both questions and pick a preference to continue"}
+          </button>
+        </div>
+      );
+    }
+
+    // ─── DONE SCREEN ─────────────────────────────────────────────────────────────
+
+    function DoneScreen({ pairs, annotations, rubricFeedback, onBack }) {
+      function buildExport() {
+        // Pairwise section: preference + reasoning
+        var pairwiseAnnotations = Object.values(annotations).map(function(ann) {
+          var pair = pairs.find(function(p) { return p.id === ann.pairId; });
+          return {
+            pairId:    ann.pairId,
+            material:  pair ? pair.material  : null,
+            questionA: pair ? pair.questionA : null,
+            questionB: pair ? pair.questionB : null,
+            metadataA: pair ? pair.metadataA : null,
+            metadataB: pair ? pair.metadataB : null,
+            winner:    ann.winner,
+            reason:    ann.reason,
+            timestamp: ann.timestamp,
+          };
+        });
+
+        // Score section: one entry per question (A and B separately)
+        var scoreAnnotations = [];
+        Object.values(annotations).forEach(function(ann) {
+          var pair = pairs.find(function(p) { return p.id === ann.pairId; });
+          scoreAnnotations.push({
+            questionId: ann.pairId + "_A",
+            pairId:     ann.pairId,
+            question:   pair ? pair.questionA : null,
+            metadata:   pair ? pair.metadataA : null,
+            scores:     ann.scoresA,
+            totalScore: totalScore(ann.scoresA),
+            timestamp:  ann.timestamp,
+          });
+          scoreAnnotations.push({
+            questionId: ann.pairId + "_B",
+            pairId:     ann.pairId,
+            question:   pair ? pair.questionB : null,
+            metadata:   pair ? pair.metadataB : null,
+            scores:     ann.scoresB,
+            totalScore: totalScore(ann.scoresB),
+            timestamp:  ann.timestamp,
+          });
+        });
+
+        return {
+          exportDate:           new Date().toISOString(),
+          summary: {
+            pairsAnnotated:       pairwiseAnnotations.length,
+            questionsScored:      scoreAnnotations.length,
+            rubricFeedbackItems:  rubricFeedback.length,
+          },
+          pairwiseAnnotations:  pairwiseAnnotations,
+          scoreAnnotations:     scoreAnnotations,
+          rubricFeedback:       rubricFeedback,
+        };
+      }
+
+      function handleExport() {
+        downloadJSON(buildExport(), "annotations_" + new Date().toISOString().slice(0, 10) + ".json");
+      }
+
+      var count = Object.keys(annotations).length;
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-indigo-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center">
+            <div className="text-5xl mb-3">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">All Done!</h2>
+            <p className="text-gray-500 text-sm mb-8">All {pairs.length} pairs have been annotated.</p>
+
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              <div className="bg-blue-50 text-blue-700 rounded-xl p-4">
+                <div className="text-3xl font-bold">{count}</div>
+                <div className="text-xs mt-0.5 opacity-80">Pairs compared</div>
+              </div>
+              <div className="bg-green-50 text-green-700 rounded-xl p-4">
+                <div className="text-3xl font-bold">{count * 2}</div>
+                <div className="text-xs mt-0.5 opacity-80">Questions scored</div>
+              </div>
+              <div className="bg-amber-50 text-amber-700 rounded-xl p-4">
+                <div className="text-3xl font-bold">{rubricFeedback.length}</div>
+                <div className="text-xs mt-0.5 opacity-80">Rubric notes</div>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500 text-left leading-relaxed">
+              The exported JSON contains two sections:<br />
+              <span className="font-semibold text-gray-700">pairwiseAnnotations</span> — winner + reasoning per pair<br />
+              <span className="font-semibold text-gray-700">scoreAnnotations</span> — dimensional scores for each individual question
+            </div>
+
+            <div className="space-y-3">
+              <button onClick={handleExport} className="w-full py-4 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700 transition-colors">
+                ⬇ Download Annotations (JSON)
+              </button>
+              <button onClick={onBack} className="w-full py-3 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition-colors">
+                ← Review / Edit Previous Annotations
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-4">Please send the downloaded JSON file to the research team.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── MAIN APP ────────────────────────────────────────────────────────────────
+
+    function App() {
+      // Build pairs once on mount from the embedded batch
+      const [pairs]                             = useState(function() { return buildPairs(BATCH); });
+      const [done, setDone]                     = useState(false);
+      const [currentIndex, setCurrentIndex]     = useState(0);
+      const [annotations, setAnnotations]       = useState({});   // { pairId: annotation }
+      const [rubricFeedback, setRubricFeedback] = useState([]);
+      const [flagModal, setFlagModal]           = useState(null);
+
+      var currentPair    = pairs[currentIndex];
+      var completedCount = Object.keys(annotations).length;
+      var progress       = pairs.length ? completedCount / pairs.length : 0;
+
+      function handleSubmit(ann) {
+        var enriched = Object.assign({}, ann, { timestamp: new Date().toISOString() });
+        var updated  = Object.assign({}, annotations);
+        updated[ann.pairId] = enriched;
+        setAnnotations(updated);
+
+        var completedIds = new Set(Object.keys(updated));
+        if (completedIds.size >= pairs.length) { setDone(true); return; }
+
+        // Advance to next unannotated pair
+        var nextIdx = -1;
+        for (var i = currentIndex + 1; i < pairs.length; i++) {
+          if (!completedIds.has(pairs[i].id)) { nextIdx = i; break; }
+        }
+        if (nextIdx === -1) {
+          for (var j = 0; j < pairs.length; j++) {
+            if (!completedIds.has(pairs[j].id)) { nextIdx = j; break; }
+          }
+        }
+        if (nextIdx !== -1) setCurrentIndex(nextIdx);
+      }
+
+      function handleFlagSubmit(payload) {
+        var criterion = CRITERIA.find(function(c) { return c.id === payload.criterionId; });
+        setRubricFeedback(function(prev) {
+          return prev.concat([{
+            id:            "rf_" + Date.now(),
+            criterionId:   payload.criterionId,
+            criterionName: criterion ? criterion.name : payload.criterionId,
+            text:          payload.text,
+            relatedPairId: currentPair ? currentPair.id : null,
+            timestamp:     new Date().toISOString(),
+          }]);
+        });
+        setFlagModal(null);
+      }
+
+      function handleExportMidway() {
+        // Same structure as done-screen export, with in-progress status
+        var annArr = Object.values(annotations);
+        var scoreAnnotations = [];
+        annArr.forEach(function(ann) {
+          var pair = pairs.find(function(p) { return p.id === ann.pairId; });
+          scoreAnnotations.push({ questionId: ann.pairId + "_A", pairId: ann.pairId, question: pair ? pair.questionA : null, metadata: pair ? pair.metadataA : null, scores: ann.scoresA, totalScore: totalScore(ann.scoresA), timestamp: ann.timestamp });
+          scoreAnnotations.push({ questionId: ann.pairId + "_B", pairId: ann.pairId, question: pair ? pair.questionB : null, metadata: pair ? pair.metadataB : null, scores: ann.scoresB, totalScore: totalScore(ann.scoresB), timestamp: ann.timestamp });
+        });
+        downloadJSON({
+          exportDate: new Date().toISOString(),
+          status: "in-progress",
+          summary: { pairsAnnotated: annArr.length, totalPairs: pairs.length, questionsScored: scoreAnnotations.length, rubricFeedbackItems: rubricFeedback.length },
+          pairwiseAnnotations: annArr.map(function(ann) {
+            var pair = pairs.find(function(p) { return p.id === ann.pairId; });
+            return { pairId: ann.pairId, material: pair ? pair.material : null, questionA: pair ? pair.questionA : null, questionB: pair ? pair.questionB : null, metadataA: pair ? pair.metadataA : null, metadataB: pair ? pair.metadataB : null, winner: ann.winner, reason: ann.reason, timestamp: ann.timestamp };
+          }),
+          scoreAnnotations: scoreAnnotations,
+          rubricFeedback: rubricFeedback,
+        }, "annotations_partial_" + new Date().toISOString().slice(0, 10) + ".json");
+      }
+
+      if (done) {
+        return (
+          <DoneScreen
+            pairs={pairs}
+            annotations={annotations}
+            rubricFeedback={rubricFeedback}
+            onBack={function() { setDone(false); setCurrentIndex(pairs.length - 1); }}
+          />
+        );
+      }
+
+      var isAnnotated = !!(currentPair && annotations[currentPair.id]);
+
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+
+          {/* ── HEADER ── */}
+          <header className="bg-white border-b shadow-sm sticky top-0 z-20">
+            <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center gap-3">
+              <span className="font-bold text-violet-700 text-sm shrink-0">📝 Annotator</span>
+              <span className="text-xs text-gray-500 shrink-0">
+                {currentIndex + 1} / {pairs.length}
+                <span className="text-gray-400 ml-1">({completedCount} saved)</span>
+              </span>
+              <div className="flex-1 flex items-center gap-2 min-w-0">
+                <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                  <div className="bg-violet-500 h-1.5 rounded-full transition-all duration-500" style={{ width: (progress * 100) + "%" }} />
+                </div>
+                <span className="text-xs text-gray-400 shrink-0">{Math.round(progress * 100)}%</span>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={function() { setCurrentIndex(function(i) { return Math.max(0, i - 1); }); }}
+                  disabled={currentIndex === 0}
+                  className="px-2.5 py-1.5 border rounded-lg text-xs disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                >←</button>
+                <button
+                  onClick={function() { setCurrentIndex(function(i) { return Math.min(pairs.length - 1, i + 1); }); }}
+                  disabled={currentIndex === pairs.length - 1}
+                  className="px-2.5 py-1.5 border rounded-lg text-xs disabled:opacity-30 hover:bg-gray-50 transition-colors"
+                >→</button>
+              </div>
+              <button
+                onClick={handleExportMidway}
+                className="shrink-0 px-3 py-1.5 border border-violet-200 bg-violet-50 text-violet-700 rounded-lg text-xs font-medium hover:bg-violet-100 transition-colors"
+              >⬇ Export</button>
+            </div>
+
+            {/* Progress dots */}
+            <div className="max-w-screen-xl mx-auto px-4 pb-2 flex gap-1.5 overflow-x-auto">
+              {pairs.map(function(pair, idx) {
+                var cls = idx === currentIndex       ? "w-6 h-3 bg-violet-600"
+                        : annotations[pair.id]       ? "w-3 h-3 bg-green-400 hover:bg-green-500"
+                                                     : "w-3 h-3 bg-gray-300 hover:bg-gray-400";
+                return (
+                  <button
+                    key={pair.id}
+                    onClick={function() { setCurrentIndex(idx); }}
+                    title={"Pair " + (idx + 1) + (annotations[pair.id] ? " ✓" : "")}
+                    className={"shrink-0 rounded-full transition-all duration-200 " + cls}
+                  />
+                );
+              })}
+            </div>
+          </header>
+
+          {/* ── MAIN ── */}
+          <main className="flex-1 max-w-screen-xl mx-auto w-full px-4 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* Left: source text + rubric */}
+              <div className="space-y-4">
+                <div className="bg-white border rounded-xl p-4 shadow-sm">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">📖 Source Material</div>
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {currentPair && currentPair.material}
+                  </p>
+                </div>
+                <RubricPanel onFlag={function(cId) { setFlagModal({ criterionId: cId }); }} />
+              </div>
+
+              {/* Right: annotation form */}
+              <div className="lg:col-span-2 space-y-3">
+                {isAnnotated && (
+                  <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+                    <span className="text-base">✅</span>
+                    <span><span className="font-semibold">Already annotated.</span> You can update your response below.</span>
+                  </div>
+                )}
+                <PairForm
+                  key={currentPair ? currentPair.id : "pair"}
+                  pair={currentPair}
+                  onSubmit={handleSubmit}
+                  existing={currentPair ? annotations[currentPair.id] : null}
+                />
+              </div>
+            </div>
+          </main>
+
+          {flagModal && (
+            <FlagModal
+              criterionId={flagModal.criterionId}
+              onClose={function() { setFlagModal(null); }}
+              onSubmit={handleFlagSubmit}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
